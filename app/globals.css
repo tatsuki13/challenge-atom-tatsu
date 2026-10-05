@@ -115,8 +115,8 @@ textarea {
 .conversation-avatar {
   position: relative;
   display: grid;
-  width: 90px;
-  height: 80px;
+  width: 180px;
+  height: 152px;
   place-items: center;
 }
 
@@ -134,7 +134,7 @@ textarea {
 
 .conversation-avatar .pet-avatar {
   z-index: 1;
-  transform: scale(1.35);
+  transform: scale(2.4);
   animation: none;
 }
 

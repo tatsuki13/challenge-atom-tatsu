@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import type { MetricsSummary } from "@/lib/conversationTypes";
+import { moodOptions } from "@/lib/mood";
+import type { ReactNode } from "react";
 
 const formatter = new Intl.NumberFormat("ja-JP");
 
@@ -12,7 +14,7 @@ function MetricBlock({
   accent,
 }: {
   label: string;
-  value: string | number;
+  value: ReactNode;
   accent: string;
 }) {
   return (
@@ -30,6 +32,7 @@ export default function DashboardClient({
 }) {
   const [metrics, setMetrics] = useState<MetricsSummary | null>(null);
   const [loading, setLoading] = useState(true);
+  const latestMood = moodOptions.find((option) => option.value === metrics?.latestMoodScore);
   const conversationQuery = conversationId
     ? `?conversationId=${encodeURIComponent(conversationId)}`
     : "";
@@ -140,8 +143,8 @@ export default function DashboardClient({
             accent="text-[#265d8f]"
           />
           <MetricBlock
-            label="直近の気分スコア"
-            value={metrics?.latestMoodScore ?? "未選択"}
+            label="直近の気分"
+            value={latestMood ? <span className="inline-flex items-center gap-3"><span aria-hidden="true">{latestMood.emoji}</span><span className="text-xl">{latestMood.label}</span></span> : "未選択"}
             accent="text-[#3b7f6a]"
           />
           <MetricBlock

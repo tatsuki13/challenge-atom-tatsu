@@ -14,6 +14,8 @@ import type {
 import type { EmotionScores, PhysicalSignals } from "@/lib/wellbeing";
 import { scoreEmotions, suggestConversation } from "@/lib/wellbeing";
 import EmotionVisualization, { getEmotionTone } from "./EmotionVisualization";
+import { moodOptions } from "@/lib/mood";
+import StateVectorClient from "./StateVectorClient";
 
 type ChatMessage = {
   id: string;
@@ -143,14 +145,6 @@ const topics = [
   "季節の思い出や楽しみなこと",
 ];
 
-const moodOptions = [
-  { value: 1, label: "重い" },
-  { value: 2, label: "少し重い" },
-  { value: 3, label: "普通" },
-  { value: 4, label: "まあ良い" },
-  { value: 5, label: "良い" },
-];
-
 function createClientId() {
   return globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`;
 }
@@ -202,6 +196,7 @@ export default function ConversationClient({
 }) {
   const router = useRouter();
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
+  const [conversationLogOpen, setConversationLogOpen] = useState(false);
   const [input, setInput] = useState("");
   const [inputType, setInputType] = useState<MessageInputType>("text");
   const [conversationId, setConversationId] = useState<string | undefined>(
@@ -395,8 +390,8 @@ export default function ConversationClient({
 
   useEffect(() => {
     const log = conversationLogRef.current;
-    if (log) log.scrollTop = log.scrollHeight;
-  }, [messages]);
+    if (log && conversationLogOpen) log.scrollTop = log.scrollHeight;
+  }, [messages, conversationLogOpen]);
 
   useEffect(() => {
     if (!speechEnabled && "speechSynthesis" in window) {
@@ -773,7 +768,7 @@ export default function ConversationClient({
 
   return (
     <main className="min-h-screen bg-[#f6f8fb] text-[#1d2733]">
-      <div className="mx-auto flex min-h-screen w-full max-w-6xl flex-col px-4 py-4 sm:px-6 lg:px-8">
+      <div className="mx-auto flex min-h-screen w-full max-w-7xl flex-col px-4 py-4 sm:px-6 lg:px-8">
         <header className="flex flex-col gap-3 border-b border-[#dfe6ee] pb-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-base font-semibold text-[#3b7f6a]">
@@ -807,8 +802,8 @@ export default function ConversationClient({
           </nav>
         </header>
 
-        <section className="grid min-h-0 flex-1 gap-5 py-5 lg:grid-cols-[minmax(0,1fr)_320px]">
-          <div className="flex h-[720px] min-w-0 flex-col overflow-hidden rounded-lg border border-[#d7e0ea] bg-white shadow-sm lg:h-[calc(100dvh-11rem)] lg:min-h-[620px] lg:self-start">
+        <section className="flex min-h-0 flex-1 flex-col gap-8 py-5">
+          <div className="flex min-w-0 flex-col overflow-hidden rounded-xl border border-[#d7e0ea] bg-white shadow-sm">
             {conversationNotice ? (
               <div
                 className="border-b border-[#c7d8e8] bg-[#eef5ff] px-4 py-3 text-lg font-semibold text-[#315b83] sm:px-5"
@@ -825,7 +820,7 @@ export default function ConversationClient({
               </div>
             ) : null}
 
-            <section className="flex shrink-0 items-center gap-3 border-b border-[#dfe6ee] bg-[radial-gradient(circle_at_center,_#f1fbf7_0%,_#ffffff_68%)] px-4 py-3 sm:gap-5 sm:px-5">
+            <section className="flex min-h-80 flex-col items-center justify-center gap-4 bg-[radial-gradient(circle_at_center,_#e5f7ef_0%,_#ffffff_72%)] px-4 py-8 sm:px-8 sm:py-10" aria-label="ATOMとの会話">
               <div
                 className="conversation-avatar shrink-0"
                 data-speaking={avatarSpeaking}
@@ -834,10 +829,10 @@ export default function ConversationClient({
               >
                 <PetAvatar mood={getAvatarMood(latestAssistantMessage)} />
               </div>
-              <div className="min-w-0 flex-1">
-                <p className="mb-2 text-sm font-bold tracking-[0.18em] text-[#3b7f6a]">ATOM</p>
+              <div className="w-full min-w-0 max-w-4xl">
+                <p className="mb-3 text-center text-sm font-bold tracking-[0.18em] text-[#3b7f6a]">ATOM</p>
                 <div
-                  className="max-h-32 overflow-y-auto break-words rounded-2xl border border-[#c7ddd4] bg-white px-4 py-3 text-lg leading-7 text-[#1d3a32] shadow-sm sm:px-5"
+                  className="break-words rounded-2xl border border-[#c7ddd4] bg-white px-5 py-5 text-xl leading-9 text-[#1d3a32] shadow-sm sm:px-8 sm:text-2xl sm:leading-10"
                   role="status"
                   aria-live="polite"
                   aria-busy={sending || restoringConversation}
@@ -847,12 +842,12 @@ export default function ConversationClient({
               </div>
             </section>
 
-            <section className="flex min-h-0 flex-1 flex-col" aria-label="対話ログ">
-              <div className="flex shrink-0 items-center justify-between border-b border-[#e7edf2] px-4 py-2 text-base font-bold sm:px-5">
-                <span>対話ログ</span>
-                <span className="text-sm text-[#596a79]">{messages.length}件</span>
-              </div>
-              <div ref={conversationLogRef} className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain bg-[#f9fbfd] px-4 py-4 sm:px-5">
+            <section className="flex min-h-0 flex-col border-t border-[#e7edf2]" aria-label="対話ログ">
+              <button type="button" onClick={() => setConversationLogOpen((open) => !open)} aria-expanded={conversationLogOpen} aria-controls="conversation-log" className="flex min-h-14 w-full items-center justify-between gap-3 px-5 py-3 text-left text-base font-bold hover:bg-[#f3f8f6] focus-visible:outline-2 focus-visible:outline-[#2f7c68] sm:px-8">
+                <span>{conversationLogOpen ? "会話ログを閉じる" : "会話ログを開く"}</span>
+                <span className="flex items-center gap-3 text-sm text-[#596a79]">{messages.length}件<span aria-hidden="true">{conversationLogOpen ? "▴" : "▾"}</span></span>
+              </button>
+              <div id="conversation-log" hidden={!conversationLogOpen} ref={conversationLogRef} className="max-h-96 min-h-0 space-y-4 overflow-y-auto overscroll-contain border-t border-[#e7edf2] bg-[#f9fbfd] px-4 py-4 sm:px-8">
                 {messages.map((message) => {
                   const isAssistant = message.role === "assistant";
 
@@ -898,7 +893,7 @@ export default function ConversationClient({
 
             <form
               onSubmit={sendMessage}
-              className="shrink-0 border-t border-[#dfe6ee] bg-[#f9fbfd] p-3 sm:p-4"
+              className="shrink-0 border-t border-[#dfe6ee] bg-[#f9fbfd] p-4 sm:px-8 sm:py-6"
             >
               <label
                 htmlFor="message"
@@ -972,7 +967,14 @@ export default function ConversationClient({
             </form>
           </div>
 
-          <aside className="space-y-5">
+          <aside className="grid items-start gap-5 md:grid-cols-2 xl:grid-cols-3" aria-label="会話に関する情報">
+            <div className="col-span-full"><h2 className="text-2xl font-bold">会話に関する情報</h2><p className="mt-2 text-base text-[#596a79]">気分や状態の変化、身体データ、今日の記録を確認できます。</p></div>
+            <section className="col-span-full rounded-lg border border-[#d7e0ea] bg-white p-5 shadow-sm" aria-labelledby="conversation-vector-heading">
+              <h2 id="conversation-vector-heading" className="text-2xl font-bold">状態ベクトルの変化</h2>
+              <p className="mt-2 text-sm leading-6 text-[#596a79]">この会話の感情4成分を表示します。返答後に自動で更新されます。</p>
+              {conversationId ? <StateVectorClient key={conversationId} demoOnly={false} currentConversationId={conversationId} refreshKey={latestAssistantMessage.id} /> : <p className="mt-4 rounded-lg bg-[#f6f8fb] p-4 text-sm leading-6">会話を始めると、ここにグラフが表示されます。</p>}
+              <Link href="/state-vector" className="mt-4 inline-block text-sm font-bold text-[#237668] underline underline-offset-4">過去の会話と比較する</Link>
+            </section>
             <section className="rounded-lg border border-[#d7e0ea] bg-white p-5 shadow-sm">
               <h2 className="text-2xl font-bold">Pixel Watch</h2>
               <p className="mt-2 text-base text-[#405163]">
@@ -1012,20 +1014,22 @@ export default function ConversationClient({
               <h2 className="text-2xl font-bold text-[#1d2733]">
                 今日の気分
               </h2>
-              <div className="mt-4 grid grid-cols-5 gap-2">
+              <div className="mt-4 grid grid-cols-3 gap-2 sm:grid-cols-5 md:grid-cols-3">
                 {moodOptions.map((option) => (
                   <button
                     key={option.value}
                     type="button"
                     onClick={() => setMoodScore(option.value)}
+                    aria-label={`今日の気分：${option.label}`}
+                    aria-pressed={moodScore === option.value}
                     className={`flex min-h-20 flex-col items-center justify-center rounded-lg border px-2 text-center transition ${
                       moodScore === option.value
                         ? "border-[#2f7c68] bg-[#dff2ea] text-[#1d3a32]"
                         : "border-[#c9d4df] bg-white text-[#405163]"
                     }`}
                   >
-                    <span className="text-3xl font-bold">{option.value}</span>
-                    <span className="text-sm font-semibold">{option.label}</span>
+                    <span className="text-4xl leading-none" aria-hidden="true">{option.emoji}</span>
+                    <span className="mt-2 whitespace-nowrap text-sm font-semibold">{option.label}</span>
                   </button>
                 ))}
               </div>
