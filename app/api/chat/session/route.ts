@@ -40,6 +40,7 @@ export async function GET(request: NextRequest) {
       role: message.role,
       text: message.content,
       emotionLabel: message.emotionLabel,
+      emotionScores: message.emotionScores ?? null,
       riskLevel: message.riskLevel,
     })),
   });

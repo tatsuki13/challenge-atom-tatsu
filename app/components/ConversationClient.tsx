@@ -11,7 +11,8 @@ import type {
   MetricsSummary,
   RiskLevel,
 } from "@/lib/conversationTypes";
-import type { EmotionScores, PhysicalSignals } from "@/lib/wellbeing";
+import { parseStateScores, parseEmotionState, type StateScores, type EmotionState } from "@/lib/emotionState";
+import type { PhysicalSignals } from "@/lib/wellbeing";
 import { scoreEmotions, suggestConversation } from "@/lib/wellbeing";
 import EmotionVisualization, { getEmotionTone } from "./EmotionVisualization";
 import { moodOptions } from "@/lib/mood";
@@ -55,7 +56,8 @@ type ChatResponse = {
   reply: string;
   conversationId: string;
   emotionLabel: EmotionLabel;
-  emotionScores: EmotionScores;
+  emotionScores: StateScores;
+  emotionState?: EmotionState | null;
   physicalSignals: PhysicalSignals | null;
   conversationSuggestion: string;
   riskLevel: RiskLevel;
@@ -78,6 +80,7 @@ type ConversationSessionResponse = {
     role: "user" | "assistant";
     text: string;
     emotionLabel: EmotionLabel | null;
+    emotionScores?: unknown;
     riskLevel: RiskLevel;
   }>;
 };
@@ -222,7 +225,7 @@ export default function ConversationClient({
   const [healthSignals, setHealthSignals] = useState<PhysicalSignals | null>(null);
   const [healthBusy, setHealthBusy] = useState(false);
   const [healthError, setHealthError] = useState<string | null>(null);
-  const [wellbeing, setWellbeing] = useState<Pick<ChatResponse, "emotionScores" | "physicalSignals" | "conversationSuggestion"> | null>(null);
+  const [wellbeing, setWellbeing] = useState<Pick<ChatResponse, "emotionScores" | "emotionState" | "physicalSignals" | "conversationSuggestion"> | null>(null);
   const conversationLogRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -356,11 +359,12 @@ export default function ConversationClient({
         ]);
         const lastUserMessage = [...data.messages].reverse().find((message) => message.role === "user");
         if (lastUserMessage) {
-          const emotionScores = scoreEmotions(lastUserMessage.text);
+          const emotionScores = parseStateScores(lastUserMessage.emotionScores) ?? { loneliness: null, anxiety: null, positive_affect: null, interest: null };
           setWellbeing({
             emotionScores,
+            emotionState: parseEmotionState(lastUserMessage.emotionScores),
             physicalSignals: null,
-            conversationSuggestion: suggestConversation(emotionScores, null),
+            conversationSuggestion: suggestConversation(scoreEmotions(lastUserMessage.text), null),
           });
         } else {
           setWellbeing(null);
@@ -647,7 +651,7 @@ export default function ConversationClient({
         { scroll: false },
       );
       setLatestDebug(data.debug ?? null);
-      setWellbeing({ emotionScores: data.emotionScores, physicalSignals: data.physicalSignals, conversationSuggestion: data.conversationSuggestion });
+      setWellbeing({ emotionState: data.emotionState, emotionScores: data.emotionScores, physicalSignals: data.physicalSignals, conversationSuggestion: data.conversationSuggestion });
       setMessages((current) => [...current, assistantMessage]);
       speak(data.reply);
       void refreshMetrics();
@@ -996,7 +1000,7 @@ export default function ConversationClient({
             </section>
             {wellbeing ? (
               <>
-                <EmotionVisualization scores={wellbeing.emotionScores} />
+                <EmotionVisualization scores={wellbeing.emotionScores} state={wellbeing.emotionState} />
                 <section className="rounded-lg border border-[#d7e0ea] bg-white p-5 shadow-sm">
                   <h2 className="text-lg font-bold">会話の参考情報</h2>
                   {wellbeing.physicalSignals ? (

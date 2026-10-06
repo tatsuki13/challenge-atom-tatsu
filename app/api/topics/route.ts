@@ -1,3 +1,4 @@
+import { scoreEmotions } from "@/lib/wellbeing";
 import { getCurrentUser } from "@/lib/auth";
 import { getPrismaClient } from "@/lib/prisma";
 
@@ -17,7 +18,7 @@ export async function GET() {
       select: {
         mainFocus: true,
         sourceUtterances: {
-          select: { sourceMessage: { select: { role: true, emotionScores: true, createdAt: true } } },
+          select: { sourceMessage: { select: { role: true, content: true, emotionScores: true, createdAt: true } } },
         },
       },
     });
@@ -28,7 +29,9 @@ export async function GET() {
         .filter((message) => message.role === "user")
         .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())[0];
       const scores = latest?.emotionScores;
-      const interest = scores && typeof scores === "object" && !Array.isArray(scores)
+      const interest = latest && scores && typeof scores === "object" && !Array.isArray(scores) && "_analysis" in scores
+        ? scoreEmotions(latest.content).interest
+        : scores && typeof scores === "object" && !Array.isArray(scores)
         ? scores.interest : null;
       const focus = decision.mainFocus?.trim();
       if (typeof interest === "number" && interest >= 0.45 && focus && !topics.includes(focus)) {

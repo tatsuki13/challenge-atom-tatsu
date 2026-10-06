@@ -1,6 +1,6 @@
 import { getCurrentUser } from "@/lib/auth";
 import { getPrismaClient } from "@/lib/prisma";
-import { parseStateVector } from "@/lib/stateVector";
+import { parseStateScores, parseEmotionState } from "@/lib/emotionState";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -36,7 +36,8 @@ export async function GET(request: Request) {
         conversationTitle: message.conversation.title,
         createdAt: message.createdAt.toISOString(),
         content: message.content,
-        scores: parseStateVector(message.emotionScores),
+        scores: parseStateScores(message.emotionScores),
+        emotionState: parseEmotionState(message.emotionScores),
       })),
     }, { headers });
   } catch {

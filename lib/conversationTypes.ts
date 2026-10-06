@@ -492,6 +492,7 @@ export type StoredChatMessage = {
   role: ChatRole;
   content: string;
   emotionLabel: EmotionLabel | null;
+  emotionScores?: unknown;
   riskLevel: RiskLevel;
   rawContent: string | null;
   inputType: MessageInputType;

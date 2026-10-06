@@ -13,7 +13,7 @@ import {
 } from "./demoStore";
 import { MEMORY_EXTRACTION_VERSION } from "./ai/memoryExtraction";
 import { getPrismaClient } from "./prisma";
-import type { EmotionScores } from "./wellbeing";
+import type { EmotionState } from "./emotionState";
 import { validateMemoryRetrievalAudit } from "./memoryRetrievalAuditRules";
 import {
   DEMO_PROFILE_ID,
@@ -41,6 +41,7 @@ function toStoredMessage(message: {
   role: string;
   content: string;
   emotionLabel: string | null;
+  emotionScores?: unknown;
   riskLevel: string;
   rawContent: string | null;
   inputType: string;
@@ -53,6 +54,7 @@ function toStoredMessage(message: {
     role: message.role === "assistant" ? "assistant" : "user",
     content: message.content,
     emotionLabel: (message.emotionLabel as EmotionLabel | null) ?? null,
+    emotionScores: message.emotionScores,
     riskLevel: (message.riskLevel as RiskLevel) ?? "none",
     rawContent: message.rawContent,
     inputType: message.inputType as MessageInputType,
@@ -230,7 +232,7 @@ export async function recordUserMessage({
   clientMessageId: string | null;
   moodScore: number | null;
   emotionLabel: EmotionLabel;
-  emotionScores?: EmotionScores;
+  emotionScores?: EmotionState;
   riskLevel: RiskLevel;
 }): Promise<{
   conversationId: string;
@@ -252,6 +254,7 @@ export async function recordUserMessage({
       clientMessageId,
       moodScore,
       emotionLabel,
+      emotionScores,
       riskLevel,
     });
   }
@@ -353,6 +356,7 @@ export async function recordUserMessage({
       clientMessageId,
       moodScore,
       emotionLabel,
+      emotionScores,
       riskLevel,
     });
   }

@@ -34,12 +34,15 @@ import {
 } from "@/lib/ai/memoryRetrieval";
 import { normalizeDetectedMemoryManagementRequest } from "@/lib/ai/memoryManagementDetection";
 import { validateReplyAgainstContract } from "@/lib/ai/replyValidation";
+import { inferEmotionState } from "@/lib/ai/emotionInference";
+import { parseEmotionState, parseStateScores, resolveEmotionState } from "@/lib/emotionState";
 import { estimateEmotion } from "@/lib/emotion";
 import { scoreEmotions, suggestConversation } from "@/lib/wellbeing";
 import { getLatestPhysicalSignals } from "@/lib/healthSamples";
 import { syncGoogleHealth } from "@/lib/googleHealth";
 import { getCurrentUser } from "@/lib/auth";
 import {
+  getConversationSession,
   recordAssistantTurn,
   recordMemoryCandidates,
   recordUserMessage,
@@ -745,7 +748,18 @@ export async function POST(request: Request) {
 
   const riskLevel: RiskLevel = detectRisk(message);
   const emotionLabel = estimateEmotion(message);
+  // Keep the existing response policy independent from the new observational state.
   const emotionScores = scoreEmotions(message);
+  const priorSession = conversationId ? await getConversationSession(conversationId, profileId) : null;
+  const priorMessages = priorSession?.messages ?? [];
+  const priorStateMessage = [...priorMessages].reverse().find((entry) => entry.role === "user" && parseEmotionState(entry.emotionScores));
+  const emotionState = riskLevel === "urgent"
+    ? resolveEmotionState(null, priorStateMessage?.emotionScores, priorStateMessage?.id ?? null, "skipped", null)
+    : await inferEmotionState({
+        message, recentMessages: priorMessages,
+        previous: priorStateMessage?.emotionScores,
+        previousMessageId: priorStateMessage?.id ?? null,
+      });
   await syncGoogleHealth(profileId).catch(() => null);
   const physicalSignals = await getLatestPhysicalSignals(profileId).catch(() => null);
   const conversationSuggestion = suggestConversation(emotionScores, physicalSignals);
@@ -763,7 +777,7 @@ export async function POST(request: Request) {
     clientMessageId,
     moodScore,
     emotionLabel,
-    emotionScores,
+    emotionScores: emotionState,
     riskLevel,
   });
   const recentAssistantReplies = getRecentAssistantReplies(
@@ -1246,7 +1260,8 @@ export async function POST(request: Request) {
     planSource,
     generationSource,
     emotionLabel,
-    emotionScores,
+    emotionScores: parseStateScores(emotionState),
+    emotionState,
     physicalSignals,
     conversationSuggestion,
     riskLevel,

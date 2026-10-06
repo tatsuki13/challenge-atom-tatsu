@@ -218,6 +218,7 @@ export function recordDemoUserMessage({
   clientMessageId,
   moodScore,
   emotionLabel,
+  emotionScores,
   riskLevel,
 }: {
   conversationId?: string;
@@ -227,6 +228,7 @@ export function recordDemoUserMessage({
   clientMessageId: string | null;
   moodScore: number | null;
   emotionLabel: EmotionLabel;
+  emotionScores?: unknown;
   riskLevel: RiskLevel;
 }) {
   const state = getState();
@@ -242,6 +244,7 @@ export function recordDemoUserMessage({
     riskLevel,
   });
 
+  storedMessage.emotionScores = emotionScores;
   conversation.messages.push(storedMessage);
 
   if (riskLevel !== "none") {

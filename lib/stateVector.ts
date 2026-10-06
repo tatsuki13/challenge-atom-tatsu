@@ -1,4 +1,5 @@
 import type { EmotionScores } from "./wellbeing";
+import type { StateScores, EmotionState } from "./emotionState";
 
 export const stateDimensions = [
   { key: "loneliness", label: "孤独感", color: "#5553a6" },
@@ -13,7 +14,8 @@ export type StateVectorPoint = {
   conversationTitle: string;
   createdAt: string;
   content: string;
-  scores: EmotionScores | null;
+  scores: StateScores | null;
+  emotionState?: EmotionState | null;
 };
 
 // Missing or malformed historical scores must not appear as a neutral vector.
@@ -29,7 +31,7 @@ export function parseStateVector(value: unknown): EmotionScores | null {
   return result;
 }
 
-export function stateVectorDelta(current: EmotionScores | null, previous: EmotionScores | null): EmotionScores | null {
+export function stateVectorDelta(current: StateScores | null, previous: StateScores | null): StateScores | null {
   if (!current || !previous) return null;
-  return Object.fromEntries(stateDimensions.map(({ key }) => [key, current[key] - previous[key]])) as EmotionScores;
+  return Object.fromEntries(stateDimensions.map(({ key }) => [key, current[key] === null || previous[key] === null ? null : current[key] - previous[key]])) as StateScores;
 }

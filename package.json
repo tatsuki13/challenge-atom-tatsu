@@ -13,7 +13,8 @@
     "prisma:generate": "prisma generate",
     "prisma:push": "prisma db push",
     "clean:cache": "rm -rf .next .turbo .vercel/output node_modules/.cache .cache",
-    "clean:all": "rm -rf .next .turbo .vercel/output node_modules/.cache .cache && npm cache verify"
+    "clean:all": "rm -rf .next .turbo .vercel/output node_modules/.cache .cache && npm cache verify",
+    "test:state-vector": "node --experimental-strip-types --test tests/stateVector.test.mjs tests/emotionState.test.mjs tests/emotionInference.test.mjs"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.8.0",
